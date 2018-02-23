@@ -1,0 +1,37 @@
+#this is n3 format
+#validate e.g. here: http://rdf-translator.appspot.com/ 
+@base <http://example.org/>. #all links (in <>) are prefixed with this text
+@prefix schema: <http://schema.org/>.
+
+<jb3-2> a schema:Person; 
+    schema:givenName "Jonas";
+    schema:familyName "Bieri";     
+    schema:gender schema:Male;
+    schema:knows <mp>. 
+
+
+#Test Sparql environment: http://test.zazukoians.org:3030/ (Apache Jena Fuseki) (user:admin, pw: see 1password)
+#Local test env of Adrian: http://192.168.0.118:3030/dataset.html?tab=query&ds=/jb3-2 
+
+
+
+
+@prefix schema: <http://schema.org/> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://example.org/jb3-2>
+        a                  schema:Person ;
+        schema:familyName  "Bieri" ;
+        schema:gender      schema:Male ;
+        schema:givenName   "Jonas" ;
+		schema:telephone	"+41 61 267 59 37";
+		schema:workLocation	"Basel" ;
+        schema:knows       <http://example.org/mp> .
+
+<http://example.org/mp>
+        a                    schema:Person ;
+        schema:affiliation   "SSZ" ;
+        schema:familyName    "Poprawe" ;
+        schema:givenName     "Marie" ;
+        schema:knows         <http://example.org/jb3-2> ;
+        schema:workLocation  "Zurich" .

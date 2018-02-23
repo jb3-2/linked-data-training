@@ -1,0 +1,331 @@
+#Aktuelle Trainings Texte: http://linked-data-training.zazuko.com/
+
+#Die folgenden Queries basieren auf den Daten in jb3-2.ttl
+
+
+#Return all triples: 
+SELECT ?subject ?predicate ?object
+WHERE {
+  ?subject a <http://schema.org/Person>
+}
+LIMIT 25
+
+#Find only persons: 
+SELECT ?subject ?predicate ?object
+WHERE {
+  ?subject a <http://schema.org/Person>
+}
+LIMIT 25
+
+#Add a base to all links: 
+BASE <http://schema.org/>
+SELECT ?subject ?predicate ?object
+WHERE {
+  ?subject a <Person>
+}
+LIMIT 25
+
+
+#Show all details of all persons: 
+PREFIX schema: <http://schema.org/>
+SELECT ?subject ?predicate ?object
+WHERE {
+  ?subject a schema:Person .
+  ?subject ?predicate ?object.
+}
+LIMIT 25
+
+
+
+
+#Show givenName of all Persons: 
+PREFIX schema: <http://schema.org/>
+SELECT *
+WHERE {
+  ?subject a schema:Person ;
+   schema:givenName ?givenName . 
+}
+LIMIT 25
+
+
+
+
+#Show givenName and familyName of all Persons:
+PREFIX schema: <http://schema.org/>
+SELECT *
+WHERE {
+  ?subject a schema:Person ;
+   schema:givenName ?givenName; 
+   schema:familyName ?familyName. 
+}
+
+
+#Additionally show phone number but also display Persons without phone: 
+PREFIX schema: <http://schema.org/>
+SELECT *
+WHERE {
+  ?subject a schema:Person ;
+           schema:givenName ?givenName ;
+           schema:familyName ?familyName .
+  OPTIONAL {?subject schema:telephone ?telephone .}
+}
+
+
+
+
+#Additionally also show worlLocation if it is present: 
+PREFIX schema: <http://schema.org/>
+SELECT *
+WHERE {
+  ?subject a schema:Person ;
+           schema:givenName ?givenName ;
+           schema:familyName ?familyName .
+  OPTIONAL {?subject schema:telephone ?telephone.}
+  OPTIONAL {?subject schema:workLocation ?workLocation .}
+}
+
+
+
+
+
+#Show givenName of a Person that a Person knows: Link to a different record and display its values: 
+PREFIX schema: <http://schema.org/>
+SELECT *
+WHERE {
+  ?subject a schema:Person ;
+           schema:givenName ?givenName;
+           schema:knows ?someoneElse.
+
+  ?someoneElse schema:givenName ?someoneElsesGivenName
+}
+
+
+
+#Filter givenname to match text that begins with a string (see string functions here: https://www.w3.org/TR/sparql11-query/#func-strings): 
+PREFIX schema: <http://schema.org/>
+SELECT  * 
+WHERE {
+  ?subject a schema:Person ;
+           schema:givenName ?givenName. 
+   FILTER regex(?givenName, '^jon', 'i').
+}
+
+#faster alternative (regex is slow): 
+PREFIX schema: <http://schema.org/>
+SELECT  ?givenName
+WHERE {
+  ?subject a schema:Person ;
+           schema:givenName ?givenName. 
+   FILTER strstarts(?givenName, 'Jon').
+}
+
+
+
+
+
+#Ab jetzt machen wir queries auf LINDAS: http://data.admin.ch/sparql/
+
+
+# Finde die Gemeinde Historie Einträge deiner Wohngemeinde: 
+PREFIX gont: <https://gont.ch/>
+SELECT * WHERE {
+  ?s a gont:MunicipalityVersion ;
+  	gont:longName ?longName.
+  FILTER strstarts (?longName, "Bennwil"). 
+} 
+LIMIT 10
+
+
+#Beschreiben einer URL (analog der Zazuko-generierten Webpage dieser Entity):
+DESCRIBE <http://classifications.data.admin.ch/municipalityversion/11919>
+
+
+
+#Name von Gemeinde, District Kanton einer Gemeinde ausgeben: 
+PREFIX gont: <https://gont.ch/>
+SELECT ?municipalityVersionlongName ?municipalityVersionlongName ?districtLongName ?cantonLongName
+WHERE {
+  ?s a gont:MunicipalityVersion ;
+  	gont:longName ?municipalityVersionlongName;
+	gont:canton ?canton ;
+	gont:district ?district .   
+  FILTER strstarts (?municipalityVersionlongName, "Bennwil"). 
+  ?canton gont:longName ?cantonLongName.
+  ?district gont:longName ?districtLongName.
+} 
+ORDER BY DESC (?municipalityVersionlongName)
+LIMIT 10
+
+#Besser als Filtern nach Kantonsname: Filtern nach Kanton URI: 
+PREFIX gont: <https://gont.ch/>
+SELECT ?municipalityVersionlongName ?municipalityVersionlongName ?districtLongName ?cantonLongName
+WHERE {
+  ?s a gont:MunicipalityVersion ;
+  	gont:longName ?municipalityVersionlongName;
+	gont:canton ?canton ;
+	gont:district ?district .   
+  FILTER strstarts (?municipalityVersionlongName, "Bennwil"). 
+  ?s gont:canton <http://classifications.data.admin.ch/canton/BL>. 
+  ?canton gont:longName ?cantonLongName.
+  ?district gont:longName ?districtLongName.
+} 
+ORDER BY DESC (?municipalityVersionlongName)
+LIMIT 10
+
+
+#Gemeindenummer holen: 
+PREFIX gont: <https://gont.ch/>
+SELECT * # ?municipalityVersionlongName ?municipalityVersionlongName ?districtLongName ?cantonLongName
+WHERE {
+  ?munVersion a gont:MunicipalityVersion ;
+  	gont:longName ?municipalityVersionlongName;
+	gont:canton ?canton ;
+	gont:district ?district .   
+  
+  ?mun gont:municipalityVersion ?munVersion;
+      	a gont:Municipality;
+      	<http://purl.org/dc/terms/identifier> ?munId.
+  
+  FILTER strstarts (?municipalityVersionlongName, "Bennwil"). 
+  ?s gont:canton <http://classifications.data.admin.ch/canton/BL>. 
+  ?canton gont:longName ?cantonLongName.
+  ?district gont:longName ?districtLongName.
+} 
+ORDER BY DESC (?municipalityVersionlongName)
+LIMIT 10
+
+
+
+#Shapes von Gemeinden im Kanton Jura anzeigen: Federierte Queries zwischen BFS und Swisstopo
+#Siehe http://linked-data-training.zazuko.com/ (Sample Data and Queries)
+
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT * WHERE {
+  # Get data from bfs
+  SERVICE <http://data.admin.ch/query/> {
+    ?munversion a <https://gont.ch/MunicipalityVersion> ;
+        <https://gont.ch/longName> ?longName ;
+        <https://gont.ch/district> ?districtUri ; 
+        # Fix the URI for a specific canton to get only those results
+  	    <https://gont.ch/canton> <http://classifications.data.admin.ch/canton/JU> ;
+        # This makes sure we still get the URI from the canton as a variable, nice to have some times
+        <https://gont.ch/canton> ?cantonUri .
+  
+    ?districtUri <https://gont.ch/longName> ?district .
+    ?cantonUri <https://gont.ch/longName> ?canton .
+  
+    ?mun a <https://gont.ch/Municipality> ;
+        <https://gont.ch/municipalityVersion> ?munversion ;
+        <http://purl.org/dc/terms/identifier> ?gdeNummer ;
+        # Get municipality Uri of swisstopo to be used in swisstopo sparql endpoint
+        <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?geoMunicipalityUri .
+  
+    #FILTER(STRSTARTS( ?longName, "C"))
+    
+    # That is another way of filtering for a specific canton, but slower
+    # FILTER(STRSTARTS( ?canton, "Bern"))
+  	
+  }
+  
+  # The subject is set to a specific URI for the start, fetch all ?version of it
+  ?geoMunicipalityUri <http://purl.org/dc/terms/hasVersion> ?version .
+  
+  # Set the version to 2018 and get ?geometry
+  ?version <http://purl.org/dc/terms/issued> "2018-01-01"^^xsd:date ;
+           <http://www.opengis.net/ont/geosparql#hasGeometry> ?geometry .
+  
+  # get WKT 
+  ?geometry <http://www.opengis.net/ont/geosparql#asWKT> ?wkt .
+} 
+
+
+
+
+#Labels auf die Shapes plazieren mit Gemeindename und -nummer: 
+
+SELECT * WHERE {
+  # Get data from bfs
+  SERVICE <http://data.admin.ch/query/> {
+    ?munversion a <https://gont.ch/MunicipalityVersion> ;
+        <https://gont.ch/longName> ?longName ;
+        <https://gont.ch/district> ?districtUri ; 
+        # Fix the URI for a specific canton to get only those results
+  	    <https://gont.ch/canton> <http://classifications.data.admin.ch/canton/BL> ;
+        # This makes sure we still get the URI from the canton as a variable, nice to have some times
+        <https://gont.ch/canton> ?cantonUri .
+  
+    ?districtUri <https://gont.ch/longName> ?district .
+    ?cantonUri <https://gont.ch/longName> ?canton .
+  
+    ?mun a <https://gont.ch/Municipality> ;
+        <https://gont.ch/municipalityVersion> ?munversion ;
+        <http://purl.org/dc/terms/identifier> ?gdeNummer ;
+        # Get municipality Uri of swisstopo to be used in swisstopo sparql endpoint
+        <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?seeAlso .
+  
+    #FILTER(STRSTARTS( ?longName, "C"))
+    
+    # That is another way of filtering for a specific canton, but slower
+    # FILTER(STRSTARTS( ?canton, "Bern"))
+  	
+  }
+  
+  # The subject is set to a specific URI for the start, fetch all ?version of it
+  ?seeAlso <http://purl.org/dc/terms/hasVersion> ?version .
+  
+  # Set the version to 2018 and get ?geometry
+  ?version <http://purl.org/dc/terms/issued> "2018-01-01"^^xsd:date ;
+           <http://www.opengis.net/ont/geosparql#hasGeometry> ?geometry .
+  
+  # get WKT 
+  ?geometry <http://www.opengis.net/ont/geosparql#asWKT> ?wkt .
+  # Add Labels to shapes
+  BIND(Concat(?longName, concat(' - ', ?gdeNummer)) as ?wktLabel)
+} 
+
+
+
+
+#Stadtarchiv Uster: Hole Bilder, verorte sie auf einer Karte, erstelle ein Label mit Thumbnail und Link auf das Bild: 
+# https://test.lindas-data.ch/sparql-ui/#
+PREFIX schema: <http://schema.org/>
+PREFIX wgs: <http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX geo: <http://www.opengis.net/ont/geosparql#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT *
+WHERE { GRAPH ?g {
+
+	?s a schema:Photograph ;
+    	schema:description ?description;
+     	#schema:description ?wktLabel;
+     	wgs:lat ?lat;
+      	wgs:long ?long;
+       	schema:thumbnailUrl ?thumbnailUrl;
+        schema:image ?imageUrl;
+    	schema:publisher ?publisher.
+     	
+         
+		BIND(concat("POINT (", str(?long), " ", str(?lat), ")") as ?point)
+    	BIND(concat(?description, "<p/><a href='", str(?imageUrl), "' target='_blank'>", "<img src='", str(?thumbnailUrl), "'/>", "</a>") 
+      		as ?pointLabel)	
+        
+}}
+
+
+
+
+#Filtern nach Sprache: Name eines Trams in ch-de und de-de: 
+# http://lod.opentransportdata.swiss/sparql/
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT * WHERE {
+  <http://lod.opentransportdata.swiss/stationtype/Tram> ?p ?o .
+  FILTER langMatches( lang(?o), "de" )
+} 
+LIMIT 10
+
+
